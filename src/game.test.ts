@@ -1,0 +1,245 @@
+import {
+  calculateHandScore,
+  dealersTurn,
+  determineGameResult,
+  playerHits,
+  playerStands,
+  setupGame,
+} from "./game";
+
+import { Hand, CardSuit, CardRank } from "./types";
+
+describe("The game setup", () => {
+  test("The cards in the deck are shuffled randomly each time the game is started", () => {
+    const firstGame = setupGame();
+    const secondGame = setupGame();
+
+    expect(firstGame.cardDeck).not.toStrictEqual(secondGame.cardDeck);
+  });
+
+  test("The player and dealer are each given two cards from the deck", () => {
+    const initialGameState = setupGame();
+    expect(initialGameState.playerHand.length).toBe(2);
+    expect(initialGameState.dealerHand.length).toBe(2);
+    expect(initialGameState.cardDeck.length).toBe(48);
+  });
+});
+
+describe("Calculating the score", () => {
+  const handA: Hand = [
+    { suit: CardSuit.Clubs, rank: CardRank.Eight },
+    { suit: CardSuit.Clubs, rank: CardRank.Ten },
+  ];
+  const handB: Hand = [
+    { suit: CardSuit.Clubs, rank: CardRank.Ace },
+    { suit: CardSuit.Clubs, rank: CardRank.Ten },
+  ];
+  const handC: Hand = [
+    { suit: CardSuit.Clubs, rank: CardRank.Ace },
+    { suit: CardSuit.Clubs, rank: CardRank.Five },
+    { suit: CardSuit.Clubs, rank: CardRank.Ace },
+    { suit: CardSuit.Clubs, rank: CardRank.Ace },
+  ];
+
+  const handD: Hand = [
+    { suit: CardSuit.Clubs, rank: CardRank.Ace },
+    { suit: CardSuit.Clubs, rank: CardRank.Ten },
+    { suit: CardSuit.Clubs, rank: CardRank.Ace },
+  ];
+
+  const handE: Hand = [
+    { suit: CardSuit.Clubs, rank: CardRank.Nine },
+    { suit: CardSuit.Clubs, rank: CardRank.Queen },
+  ];
+
+  test("The score for a hand with 8, 10 is 18", () => {
+    expect(calculateHandScore(handA)).toBe(18);
+  });
+
+  test("The score for a hand with Ace, 10 is 21", () => {
+    expect(calculateHandScore(handB)).toBe(21);
+  });
+
+  test("The score for a hand with Ace, 5, Ace, Ace is 18", () => {
+    expect(calculateHandScore(handC)).toBe(18);
+  });
+
+  test("The score for a hand with Ace, 10, Ace is 12", () => {
+    expect(calculateHandScore(handD)).toBe(12);
+  });
+
+  test("The score for a hand with 9, Queen is 19", () => {
+    expect(calculateHandScore(handE)).toBe(19);
+  });
+});
+
+describe("The player actions", () => {
+  test("When the player 'Hits' they receive a card from the deck", () => {
+    const initialGameState = setupGame();
+
+    const newGameState = playerHits(initialGameState);
+    expect(newGameState.cardDeck.length).toBe(
+      initialGameState.cardDeck.length - 1
+    );
+    expect(newGameState.playerHand.length).toBe(
+      initialGameState.playerHand.length + 1
+    );
+  });
+
+  test("When the player 'Stands' and the dealer has a score of 16 or less then the dealer must take another card", () => {
+    const initialGameState = setupGame();
+    initialGameState.dealerHand = [
+      { suit: CardSuit.Clubs, rank: CardRank.Ten },
+      { suit: CardSuit.Clubs, rank: CardRank.Six },
+    ];
+
+    const newGameState = dealersTurn(playerStands(initialGameState));
+
+    expect(newGameState.dealerHand.length).toBe(
+      initialGameState.dealerHand.length + 1
+    );
+  });
+
+  test("When the player 'Stands' and the dealers score is 17 or more the dealer does not take another card", () => {
+    const initialGameState = setupGame();
+    initialGameState.dealerHand = [
+      { suit: CardSuit.Clubs, rank: CardRank.Ten },
+      { suit: CardSuit.Clubs, rank: CardRank.Seven },
+    ];
+
+    const newGameState = dealersTurn(playerStands(initialGameState));
+
+    expect(newGameState.dealerHand.length).toBe(
+      initialGameState.dealerHand.length
+    );
+  });
+});
+
+describe("Determining the winner", () => {
+  const winningHand: Hand = [
+    { suit: CardSuit.Clubs, rank: CardRank.Ace },
+    { suit: CardSuit.Clubs, rank: CardRank.Ten },
+  ];
+  const losingHand: Hand = [
+    { suit: CardSuit.Clubs, rank: CardRank.Ace },
+    { suit: CardSuit.Clubs, rank: CardRank.Five },
+    { suit: CardSuit.Clubs, rank: CardRank.Ace },
+    { suit: CardSuit.Clubs, rank: CardRank.Ace },
+  ];
+
+  test("When the players or dealers hand is higher than 21 they go 'bust' and the other player wins", () => {
+    const game = setupGame();
+    const bustHand: Hand = [
+      { suit: CardSuit.Clubs, rank: CardRank.Ten },
+      { suit: CardSuit.Clubs, rank: CardRank.Ten },
+      { suit: CardSuit.Clubs, rank: CardRank.Ten },
+    ];
+    game.playerHand = bustHand;
+    expect(
+      determineGameResult({
+        dealerHand: game.dealerHand,
+        dealerScore: calculateHandScore(game.dealerHand),
+        playerHand: bustHand,
+        playerScore: calculateHandScore(bustHand),
+      })
+    ).toBe("dealer_win");
+
+    const game2 = setupGame();
+    game2.dealerHand = bustHand;
+    expect(
+      determineGameResult({
+        dealerHand: bustHand,
+        dealerScore: calculateHandScore(bustHand),
+        playerHand: game2.playerHand,
+        playerScore: calculateHandScore(game2.playerHand),
+      })
+    ).toBe("player_win");
+  });
+
+  test("When the dealers hand is higher than the players hand the dealer wins", () => {
+    const game = setupGame();
+
+    game.dealerHand = winningHand;
+    game.playerHand = losingHand;
+    expect(
+      determineGameResult({
+        dealerHand: game.dealerHand,
+        dealerScore: calculateHandScore(game.dealerHand),
+        playerHand: losingHand,
+        playerScore: calculateHandScore(losingHand),
+      })
+    ).toBe("dealer_win");
+  });
+
+  test("When the players hand is higher than the dealers hand the player wins", () => {
+    const game = setupGame();
+
+    game.dealerHand = losingHand;
+    game.playerHand = winningHand;
+    expect(
+      determineGameResult({
+        dealerHand: losingHand,
+        dealerScore: calculateHandScore(losingHand),
+        playerHand: winningHand,
+        playerScore: calculateHandScore(winningHand),
+      })
+    ).toBe("player_win");
+  });
+
+  test("When the players and dealers score is equal the game is a draw", () => {
+    const game = setupGame();
+    const equalHand: Hand = [
+      { suit: CardSuit.Clubs, rank: CardRank.Ten },
+      { suit: CardSuit.Clubs, rank: CardRank.Ten },
+    ];
+    game.playerHand = equalHand;
+    game.dealerHand = equalHand;
+    expect(
+      determineGameResult({
+        dealerHand: equalHand,
+        dealerScore: calculateHandScore(equalHand),
+        playerHand: equalHand,
+        playerScore: calculateHandScore(equalHand),
+      })
+    ).toBe("draw");
+  });
+
+  test("When the players has Black Jack and the dealer doesn't the player will win", () => {
+    const game = setupGame();
+    const blackJack: Hand = [
+      { suit: CardSuit.Clubs, rank: CardRank.Ace },
+      { suit: CardSuit.Clubs, rank: CardRank.King },
+    ];
+    const notBlackJack: Hand = [
+      { suit: CardSuit.Clubs, rank: CardRank.Ace },
+      { suit: CardSuit.Clubs, rank: CardRank.Five },
+      { suit: CardSuit.Clubs, rank: CardRank.Five },
+    ];
+    game.playerHand = blackJack;
+    game.dealerHand = notBlackJack;
+    const playerScore = calculateHandScore(blackJack);
+    const dealerScore = calculateHandScore(notBlackJack);
+    expect(playerScore).toBe(21);
+    expect(dealerScore).toBe(21);
+    expect(
+      determineGameResult({
+        dealerHand: notBlackJack,
+        dealerScore,
+        playerHand: blackJack,
+        playerScore,
+      })
+    ).toBe("player_win");
+
+    game.playerHand = blackJack;
+    game.dealerHand = blackJack;
+    expect(
+      determineGameResult({
+        dealerHand: blackJack,
+        dealerScore: calculateHandScore(blackJack),
+        playerHand: blackJack,
+        playerScore: calculateHandScore(blackJack),
+      })
+    ).toBe("draw");
+  });
+});
+export {};
