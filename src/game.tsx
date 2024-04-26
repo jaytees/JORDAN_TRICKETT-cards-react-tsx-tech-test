@@ -203,41 +203,12 @@ const helpSuggestions = (state: GameState): Suggestion => {
   const playerScore = calculateHandScore(state.playerHand);
   const dealerScore = assertCardValue(state.dealerHand[0], 0);
 
-  // soft hand
-  // if (playerHasAce)
-  // hit
-  // >=13 && <= 16 && dealer 4, 5, 6
-  //  === 17 && <= 7
-  // === 18 && dealer 9 || 10
-  // === 19 && dealer 6
-
-  // hard hit
-  // === 5,6,7,11 regardless of dealer score
-  // === 8 && delaer 5 || 6
-  // === 9 && dealer >=2 && dealer <=6
-  // === 10 && dealer !== 10 || ace
-  // === 13 && dealer !== 2,3,4,5,6
-  // === 14 && dealer >=2 && dealer <=6
-  // === 16 && dealer <2 && dealer >6
-
   if (
     (playerHasAce && softHitConditions(playerScore, dealerScore)) ||
     hardHitConditions(playerScore, dealerScore)
   ) {
     return Suggestion.Hit;
   }
-
-  // stand soft hands
-  // === 18 && dealer 2 to 8 || ace
-  // === 19 && dealer !== 6
-  // >= 20
-
-  // stand
-  // === 12 && dealer === 4,5,6
-  // === 13 && dealer === 2,3,4,5,6
-  // === 14 || === 15 && dealer <2 && dealer >6
-  // === 16 && dealer >=2 && dealer <=6
-  // >= 17
 
   return Suggestion.Stand;
 };
