@@ -30,6 +30,7 @@ export type Turn = "player_turn" | "dealer_turn";
 export enum Suggestion {
   Hit = "hit",
   Stand = "Stand",
+  Empty = "",
 }
 
 export type Card = {

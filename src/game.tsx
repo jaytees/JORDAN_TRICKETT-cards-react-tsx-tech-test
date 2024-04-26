@@ -186,17 +186,16 @@ const hardHitConditions = (
   return (
     (playerScore >= 5 && playerScore <= 7) ||
     (playerScore === 8 && (dealerScore === 5 || dealerScore === 6)) ||
-    playerScore === 8 ||
     (playerScore === 9 && dealerScore >= 2 && dealerScore <= 6) ||
     (playerScore === 10 && dealerScore !== 10 && dealerScore !== 11) ||
     ((playerScore === 13 || playerScore === 14) &&
       dealerScore >= 2 &&
       dealerScore <= 6) ||
-    (playerScore === 16 && dealerScore < 2 && dealerScore > 6)
+    (playerScore === 16 && (dealerScore < 2 || dealerScore > 6))
   );
 };
 
-const helpSuggestions = (state: GameState): Suggestion => {
+const getPlayerActionSuggestion = (state: GameState): Suggestion => {
   const playerHasAce = state.playerHand.some(
     (card) => card.rank === CardRank.Ace
   );
@@ -255,6 +254,8 @@ const Game = (): JSX.Element => {
   const [gameResult, setGameResult] = useState<GameResult>(
     "no_result" as GameResult
   );
+  const [suggestion, setSuggestion] = useState<Suggestion>(Suggestion.Empty);
+  const [helpDisabled, setHelpDisabled] = useState(false);
 
   const playerScore = useMemo(
     () => calculateHandScore(state.playerHand),
@@ -267,9 +268,14 @@ const Game = (): JSX.Element => {
   );
 
   const onClickHelp = () => {
-    // setFlag buttonClicked
-    // call help function
-    // setSuggestion state from return value
+    setHelpDisabled(true);
+    setSuggestion(getPlayerActionSuggestion(state));
+  };
+
+  const onClickReset = () => {
+    setHelpDisabled(false);
+    setSuggestion(Suggestion.Empty);
+    setState(setupGame());
   };
 
   useEffect(() => {
@@ -319,8 +325,12 @@ const Game = (): JSX.Element => {
           onClick={(): void => setState(playerStands)}>
           Stand
         </button>
-        <button onClick={(): void => setState(setupGame())}>Reset</button>
+        <button onClick={onClickReset}>Reset</button>
+        <button onClick={onClickHelp} disabled={helpDisabled}>
+          Help
+        </button>
       </div>
+      {suggestion && <p>{suggestion}</p>}
       <p>Player Cards</p>
       <div>
         {state.playerHand.map(CardImage)}
