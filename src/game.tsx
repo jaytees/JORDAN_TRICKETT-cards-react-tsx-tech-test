@@ -8,6 +8,7 @@ import {
   Hand,
   GameResult,
   HandStatus,
+  Suggestion,
 } from "./types";
 
 //UI Elements
@@ -78,11 +79,14 @@ const assertCardValue = (card: Card, currentHandTotal: number): number => {
 
 //Scoring
 const calculateHandScore = (hand: Hand): number => {
+  let numberOfAces = 0;
   let score = hand.reduce((acc, card) => {
+    if (card.rank === CardRank.Ace) {
+      numberOfAces++;
+    }
     let cardValue = assertCardValue(card, acc);
     return acc + cardValue;
   }, 0);
-  const numberOfAces = hand.filter((card) => card.rank === CardRank.Ace).length;
   if (numberOfAces > 1 && score > 21) {
     score -= 10;
   }
@@ -160,6 +164,84 @@ const determineGameResult = ({
   return "no_result";
 };
 
+const softHitConditions = (
+  playerScore: number,
+  dealerScore: number
+): boolean => {
+  return (
+    (playerScore >= 13 &&
+      playerScore <= 16 &&
+      dealerScore >= 4 &&
+      dealerScore <= 6) ||
+    (playerScore === 17 && dealerScore <= 7) ||
+    (playerScore === 18 && dealerScore >= 9) ||
+    (playerScore === 18 && dealerScore === 10) ||
+    (playerScore === 19 && dealerScore === 6)
+  );
+};
+const hardHitConditions = (
+  playerScore: number,
+  dealerScore: number
+): boolean => {
+  return (
+    (playerScore >= 5 && playerScore <= 7) ||
+    (playerScore === 8 && (dealerScore === 5 || dealerScore === 6)) ||
+    playerScore === 8 ||
+    (playerScore === 9 && dealerScore >= 2 && dealerScore <= 6) ||
+    (playerScore === 10 && dealerScore !== 10 && dealerScore !== 11) ||
+    ((playerScore === 13 || playerScore === 14) &&
+      dealerScore >= 2 &&
+      dealerScore <= 6) ||
+    (playerScore === 16 && dealerScore < 2 && dealerScore > 6)
+  );
+};
+
+const helpSuggestions = (state: GameState): Suggestion => {
+  const playerHasAce = state.playerHand.some(
+    (card) => card.rank === CardRank.Ace
+  );
+  const playerScore = calculateHandScore(state.playerHand);
+  const dealerScore = assertCardValue(state.dealerHand[0], 0);
+
+  // soft hand
+  // if (playerHasAce)
+  // hit
+  // >=13 && <= 16 && dealer 4, 5, 6
+  //  === 17 && <= 7
+  // === 18 && dealer 9 || 10
+  // === 19 && dealer 6
+
+  // hard hit
+  // === 5,6,7,11 regardless of dealer score
+  // === 8 && delaer 5 || 6
+  // === 9 && dealer >=2 && dealer <=6
+  // === 10 && dealer !== 10 || ace
+  // === 13 && dealer !== 2,3,4,5,6
+  // === 14 && dealer >=2 && dealer <=6
+  // === 16 && dealer <2 && dealer >6
+
+  if (
+    (playerHasAce && softHitConditions(playerScore, dealerScore)) ||
+    hardHitConditions(playerScore, dealerScore)
+  ) {
+    return Suggestion.Hit;
+  }
+
+  // stand soft hands
+  // === 18 && dealer 2 to 8 || ace
+  // === 19 && dealer !== 6
+  // >= 20
+
+  // stand
+  // === 12 && dealer === 4,5,6
+  // === 13 && dealer === 2,3,4,5,6
+  // === 14 || === 15 && dealer <2 && dealer >6
+  // === 16 && dealer >=2 && dealer <=6
+  // >= 17
+
+  return Suggestion.Stand;
+};
+
 //Player Actions
 const playerStands = (state: GameState): GameState => {
   return {
@@ -212,6 +294,12 @@ const Game = (): JSX.Element => {
     () => calculateHandScore(state.dealerHand),
     [state.dealerHand]
   );
+
+  const onClickHelp = () => {
+    // setFlag buttonClicked
+    // call help function
+    // setSuggestion state from return value
+  };
 
   useEffect(() => {
     if (state.turn === "dealer_turn") {

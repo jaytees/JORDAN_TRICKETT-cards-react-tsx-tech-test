@@ -27,6 +27,11 @@ export type GameResult = "no_result" | "player_win" | "dealer_win" | "draw";
 
 export type Turn = "player_turn" | "dealer_turn";
 
+export enum Suggestion {
+  Hit = "hit",
+  Stand = "Stand",
+}
+
 export type Card = {
   suit: CardSuit;
   rank: CardRank;
